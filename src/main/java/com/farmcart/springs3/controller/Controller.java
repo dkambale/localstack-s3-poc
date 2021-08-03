@@ -1,5 +1,6 @@
 package com.farmcart.springs3.controller;
 
+import com.amazonaws.services.s3.model.*;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -8,18 +9,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.Bucket;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+
 import java.util.List;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.model.GetObjectRequest;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -72,12 +68,30 @@ public class Controller
         return stringifyContentsOfBucketObject(bucketName, objectName);
     }
 
+    @RequestMapping(value = "/upload",method = GET,produces = "application/json", params = {"bucketName"})
+    public String uploadSampleFileIntoS3(@RequestParam("bucketName")String bucketName) throws IOException {
+        final AmazonS3 s3 = AmazonS3ClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:4566/","eu-west-1"))
+                .withPathStyleAccessEnabled(true)
+                .build();
+
+
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(0);
+        // create empty content
+        InputStream emptyContent = new ByteArrayInputStream(new byte[0]);
+        // create a PutObjectRequest passing the folder name suffixed by /
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName,
+                "folderName" + "/", emptyContent, metadata);
+        return "File Uploaded successfully";
+    }
+
 
     public String stringifyContentsOfBucketObject(String bucketName, String objectName)
     {
         String returnString = "";
         final AmazonS3 s3 = AmazonS3ClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:4572/","eu-west-1"))
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:4566/","eu-west-1"))
                 .withPathStyleAccessEnabled(true)
                 .build();
 
@@ -131,7 +145,6 @@ public class Controller
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:4566/","eu-west-1"))
                 .withPathStyleAccessEnabled(true)
                 .build();
-
         ListObjectsV2Result result = s3.listObjectsV2(bucketName);
         List<S3ObjectSummary> objects = result.getObjectSummaries();
         for (S3ObjectSummary os: objects) {
